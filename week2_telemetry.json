@@ -1,0 +1,15 @@
+{
+  "week": 2,
+  "mode": "ADVISORY (Nudges Enabled)",
+  "metrics": {
+    "totalContracts": 70,
+    "nudgesSent": 6,
+    "nudgesActedOn": 6,
+    "nudgesIgnored": 0,
+    "actualFailures": 5,
+    "failureRate": "7.1%",
+    "nudgeSuccessRate": "100.0%",
+    "alertFatigue": "0.0%"
+  },
+  "recommendation": "PROCEED TO WEEK 3 (ACTIVE)"
+}

@@ -1,0 +1,16 @@
+{
+  "week": 4,
+  "mode": "ACTIVE (Expanded)",
+  "metrics": {
+    "totalContracts": 350,
+    "escalationsTriggered": 28,
+    "highRiskEscalations": 12,
+    "mediumRiskEscalations": 16,
+    "escalationsSuppressed": 20,
+    "recoveries": 21,
+    "overrides": 7,
+    "recoveryRate": "75.0%",
+    "suppressionRate": "41.7%"
+  },
+  "recommendation": "CONSTRAINED ROLLOUT"
+}
