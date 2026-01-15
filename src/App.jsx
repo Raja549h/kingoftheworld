@@ -5,6 +5,7 @@ import { DecisionCard } from './components/DecisionCard';
 import { ContractForm } from './components/ContractForm';
 import { ExecutionFeed } from './components/ExecutionFeed';
 import { AuditLogView } from './components/AuditLogView';
+import { AccessGate } from './components/AccessGate';
 
 function Dashboard() {
   const { state, dispatch } = useExecution();
@@ -94,7 +95,9 @@ function Dashboard() {
 export default function App() {
   return (
     <ExecutionProvider>
-      <Dashboard />
+      <AccessGate>
+        <Dashboard />
+      </AccessGate>
     </ExecutionProvider>
   );
 }
