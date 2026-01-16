@@ -164,8 +164,12 @@ export function AccessGate({ children }) {
                 </h1>
 
                 {error && (
-                    <div style={{ padding: '1rem', background: 'rgba(239, 68, 68, 0.1)', color: 'var(--accent-danger)', fontSize: '0.8rem', marginBottom: '1rem', borderRadius: '4px' }}>
-                        {error}
+                    <div style={{ padding: '1rem', background: 'rgba(239, 68, 68, 0.1)', color: 'var(--accent-danger)', fontSize: '0.8rem', marginBottom: '1rem', borderRadius: '4px', wordBreak: 'break-word', textAlign: 'left' }}>
+                        <strong>ERROR:</strong> {error}
+                        <br /><br />
+                        <strong>DEBUG INFO (Check this vs Cloudflare):</strong><br />
+                        Auth Domain: <code>{currentConfig.authDomain}</code><br />
+                        Project ID: <code>{currentConfig.projectId}</code>
                     </div>
                 )}
 
