@@ -1,0 +1,16 @@
+--- LONGITUDINAL SIMULATION (60 DAYS) ---
+
+
+--- FINAL RESULTS ---
+Reliable Rex: Final Trust Score = 100% (Inherent: 95%)
+Average Alice: Final Trust Score = 75% (Inherent: 80%)
+Chaos Carl: Final Trust Score = 20% (Inherent: 50%)
+
+Total Contracts: 46
+Total Failures: 11
+Prediction Accuracy:
+  True Positives (Predicted Fail & Failed): 3
+  False Positives (Predicted Fail & Succeeded): 13
+  False Negatives (Predicted Success & Failed): 8
+  Precision: 18.8%
+  Recall: 27.3%

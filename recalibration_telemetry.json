@@ -1,0 +1,13 @@
+{
+  "week": "Recalibration",
+  "metrics": {
+    "totalContracts": 70,
+    "silentRiskFlags": 10,
+    "actualFailures": 12,
+    "truePositives": 5,
+    "falsePositives": 5,
+    "precision": "50.0%",
+    "recall": "41.7%"
+  },
+  "recommendation": "KEEP CALIBRATING"
+}
