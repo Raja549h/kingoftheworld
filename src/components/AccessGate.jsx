@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { loginWithGoogle, auth, db } from '../lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, setDoc, collection, getDocs } from 'firebase/firestore';
@@ -7,9 +7,33 @@ import * as XLSX from 'xlsx';
 const ALLOWED_CODES = ['KING-ALPHA', 'EXECUTE-NOW', 'WORLD-DOMINATION'];
 const STORAGE_KEY = 'kotw_access_granted';
 
-export function AccessGate({ children }) {
+class ErrorBoundary extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = { hasError: false, error: null };
+    }
+
+    static getDerivedStateFromError(error) {
+        return { hasError: true, error };
+    }
+
+    render() {
+        if (this.state.hasError) {
+            return (
+                <div style={{ padding: '2rem', color: 'red', textAlign: 'center' }}>
+                    <h1>Something went wrong.</h1>
+                    <pre>{this.state.error.toString()}</pre>
+                    <button onClick={() => window.location.reload()} style={{ padding: '1rem', marginTop: '1rem' }}>Reload Page</button>
+                </div>
+            );
+        }
+        return this.props.children;
+    }
+}
+
+function AccessGateInner({ children }) {
     const [user, setUser] = useState(null);
-    const [profile, setProfile] = useState(null); // { designation, company }
+    const [profile, setProfile] = useState(null);
     const [isAuthorized, setIsAuthorized] = useState(false);
     const [code, setCode] = useState('');
     const [designation, setDesignation] = useState('');
@@ -17,29 +41,50 @@ export function AccessGate({ children }) {
 
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(true);
-    const [view, setView] = useState('loading'); // loading, login, profile, code, authorized
+    const [view, setView] = useState('loading');
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+            console.log("Auth State Changed:", currentUser?.email);
             setLoading(true);
+
             if (currentUser) {
                 setUser(currentUser);
-                // Check if profile exists in Firestore
-                const docRef = doc(db, "users", currentUser.uid);
-                const docSnap = await getDoc(docRef);
+                try {
+                    // Check if profile exists in Firestore
+                    const docRef = doc(db, "users", currentUser.uid);
+                    let docSnap = null;
 
-                if (docSnap.exists()) {
-                    setProfile(docSnap.data());
-                    // Check local storage for session
-                    const granted = localStorage.getItem(STORAGE_KEY);
-                    if (granted === 'true') {
-                        setIsAuthorized(true);
-                        setView('authorized');
-                    } else {
+                    try {
+                        docSnap = await getDoc(docRef);
+                    } catch (fsError) {
+                        console.error("Firestore Read Error:", fsError);
+                        // If Firestore fails (e.g. permissions), we can handle it
+                        // For now, treat as no profile, or show specific error if critical
+                        setError('Notice: Could not load profile (Firestore Check Failed). ' + fsError.message);
+                        // Fallback: Just ask for code if we can't read profile
                         setView('code');
+                        setLoading(false);
+                        return; // Stop here
                     }
-                } else {
-                    setView('profile'); // Need to collect info
+
+                    if (docSnap && docSnap.exists()) {
+                        setProfile(docSnap.data());
+                        const granted = localStorage.getItem(STORAGE_KEY);
+                        if (granted === 'true') {
+                            setIsAuthorized(true);
+                            setView('authorized');
+                        } else {
+                            setView('code');
+                        }
+                    } else {
+                        // No profile found (or new user)
+                        setView('profile');
+                    }
+                } catch (err) {
+                    console.error("Access Logic Error:", err);
+                    setError("Critical Login Logic Error: " + err.message);
+                    setView('login'); // Fallback to login
                 }
             } else {
                 setUser(null);
@@ -67,13 +112,11 @@ export function AccessGate({ children }) {
         }
     };
 
+    // DEBUG: Get current config
+    const currentConfig = auth.app.options;
+
     const handleProfileSubmit = async (e) => {
         e.preventDefault();
-        if (!designation || !company) {
-            setError('Please complete all fields.');
-            return;
-        }
-
         try {
             setLoading(true);
             const userData = {
@@ -88,10 +131,10 @@ export function AccessGate({ children }) {
             await setDoc(doc(db, "users", user.uid), userData);
             setProfile(userData);
             setView('code');
-            setLoading(false);
         } catch (err) {
             console.error(err);
-            setError('Failed to save profile. Check network/permissions.');
+            setError('Failed to save profile: ' + err.message);
+        } finally {
             setLoading(false);
         }
     };
@@ -104,7 +147,6 @@ export function AccessGate({ children }) {
             setView('authorized');
             setError('');
         } else if (code === 'EXPORT-DATA-99') {
-            // Secret Admin Code for Export
             await exportRegistry();
         } else {
             setError('ACCESS DENIED: Invalid Authorization Code');
@@ -132,7 +174,13 @@ export function AccessGate({ children }) {
 
     if (loading) return (
         <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-primary)', color: 'var(--text-muted)' }}>
-            Wait...
+            <div style={{ textAlign: 'center' }}>
+                <div>CONNECTING...</div>
+                <div style={{ fontSize: '0.7em', marginTop: '1rem', color: '#666' }}>
+                    ID: {currentConfig.projectId}<br />
+                    Auth: {currentConfig.authDomain}
+                </div>
+            </div>
         </div>
     );
 
@@ -167,9 +215,8 @@ export function AccessGate({ children }) {
                     <div style={{ padding: '1rem', background: 'rgba(239, 68, 68, 0.1)', color: 'var(--accent-danger)', fontSize: '0.8rem', marginBottom: '1rem', borderRadius: '4px', wordBreak: 'break-word', textAlign: 'left' }}>
                         <strong>ERROR:</strong> {error}
                         <br /><br />
-                        <strong>DEBUG INFO (Check this vs Cloudflare):</strong><br />
-                        Auth Domain: <code>{currentConfig.authDomain}</code><br />
-                        Project ID: <code>{currentConfig.projectId}</code>
+                        <strong>DEBUG INFO:</strong><br />
+                        Auth Domain: <code>{currentConfig.authDomain}</code>
                     </div>
                 )}
 
@@ -207,7 +254,7 @@ export function AccessGate({ children }) {
                 {view === 'code' && (
                     <form onSubmit={handleCodeSubmit} className="flex flex-col gap-4">
                         <p className="text-muted" style={{ marginBottom: '1rem', fontSize: '0.9rem' }}>
-                            Welcome, {profile?.name}. Enter access code.
+                            Welcome, {profile?.name || user?.displayName || 'Agent'}. Enter access code.
                         </p>
                         <input type="password" placeholder="SECRET CODE" value={code} onChange={e => setCode(e.target.value)} autoFocus
                             style={{ padding: '0.8rem', background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', color: 'white', textAlign: 'center', letterSpacing: '0.2em' }} />
@@ -220,5 +267,13 @@ export function AccessGate({ children }) {
                 )}
             </div>
         </div>
+    );
+}
+
+export function AccessGate({ children }) {
+    return (
+        <ErrorBoundary>
+            <AccessGateInner>{children}</AccessGateInner>
+        </ErrorBoundary>
     );
 }
