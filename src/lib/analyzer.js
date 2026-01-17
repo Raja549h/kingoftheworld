@@ -1,31 +1,57 @@
 export function analyzeText(text) {
-    const lines = text.split('\n');
+    // Pre-processing: Split by newlines and then by sentences to get granular segments
+    const rawLines = text.split('\n');
+    const segments = [];
+
+    rawLines.forEach(line => {
+        const trimmed = line.trim();
+        if (!trimmed) return;
+
+        // Check if it's explicitly a list item (starts with -, *, •, or 1.)
+        const isBullet = /^(\d+\.|[\-\*\•])\s/.test(trimmed);
+
+        if (isBullet) {
+            // If it's a bullet, treat the whole line as one distinct point
+            // Remove the bullet marker for cleaner summary
+            segments.push(trimmed.replace(/^(\d+\.|[\-\*\•])\s/, ''));
+        } else {
+            // If it's a paragraph, split into sentences
+            // Split by punctuation (.?!) followed by whitespace, but keep the punctuation logic simpler for now
+            // Using a lookbehind equivalent or simple split
+            const sentences = trimmed.match(/[^.?!]+[.?!]+|[^.?!]+$/g);
+            if (sentences) {
+                sentences.forEach(s => segments.push(s.trim()));
+            } else {
+                segments.push(trimmed);
+            }
+        }
+    });
+
     const decisions = [];
 
     // Expanded Heuristics
     // 1. Explicit: "will", "decided", "agree"
     // 2. Implicit: "John to finish", "Alice to draft"
-    const explicitKeywords = ['agree', 'will', 'decided', 'action', 'deadline', 'ensure'];
+    const explicitKeywords = ['agree', 'will', 'decided', 'action', 'deadline', 'ensure', 'tasked', 'responsible'];
     const implicitPattern = /^[A-Z][a-z]+ to [a-z]+/; // e.g. "John to test"
 
-    lines.forEach(line => {
-        const trimmed = line.trim();
-        if (trimmed.length < 10) return;
+    segments.forEach(segment => {
+        if (segment.length < 10) return;
 
-        const lower = trimmed.toLowerCase();
+        const lower = segment.toLowerCase();
         const hasExplicit = explicitKeywords.some(k => lower.includes(k));
-        const hasImplicit = implicitPattern.test(trimmed);
-        const isQuestion = trimmed.endsWith('?');
+        const hasImplicit = implicitPattern.test(segment);
+        const isQuestion = segment.endsWith('?');
 
         if ((hasExplicit || hasImplicit) && !isQuestion) {
             decisions.push({
                 id: crypto.randomUUID(),
-                summary: trimmed,
-                rawText: trimmed,
+                summary: segment,
+                rawText: segment,
                 confidence: hasImplicit ? 'high' : 'medium',
                 status: 'detected',
-                suggestedOwner: extractOwner(trimmed),
-                suggestedDeadline: extractDeadline(trimmed),
+                suggestedOwner: extractOwner(segment),
+                suggestedDeadline: extractDeadline(segment),
             });
         }
     });
