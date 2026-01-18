@@ -158,14 +158,21 @@ function AccessGateInner({ children }) {
         try {
             const querySnapshot = await getDocs(collection(db, "users"));
             const data = [];
+            let serialNo = 1;
+
             querySnapshot.forEach((doc) => {
-                data.push(doc.data());
+                const userData = doc.data();
+                data.push({
+                    'S.No': serialNo++,
+                    'Name': userData.name || 'N/A',
+                    'Email': userData.email || 'N/A'
+                });
             });
 
             const ws = XLSX.utils.json_to_sheet(data);
             const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Registry");
-            XLSX.writeFile(wb, "KingOfTheWorld_Registry.xlsx");
+            XLSX.utils.book_append_sheet(wb, ws, "Users");
+            XLSX.writeFile(wb, "KingOfTheWorld_Users.xlsx");
             setError('Registry Downloaded!');
         } catch (err) {
             setError('Export Failed: ' + err.message);
